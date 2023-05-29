@@ -1,8 +1,8 @@
-const { response } = require("express");
-const bcryptjs = require('bcryptjs');
+const { response, request } = require("express");
+const bcryptjs = require("bcryptjs");
 
 //models
-const user = require('../models/user');
+const user = require("../models/user");
 
 //Helpers
 const { generarJWT } = require("../helpers/generar-jwt");
@@ -11,57 +11,94 @@ const { googleVerify } = require("../helpers/google-verify");
 // ------------------USUARIO LOGIN ----------------------//
 
 const login = async (req, res = response) => {
-
   const { email, password } = req.body;
 
   try {
     // Verificar si el email existe
     const Userlogin = await user.findOne({ email });
     if (!Userlogin) {
-      return res.status(400).json ({ 
-        msg:'Usuario / Password no son correctos - email'
+      return res.status(400).json({
+        msg: "Usuario / Password no son correctos - email",
       });
     }
     // Si el usuario esta activo
     if (!Userlogin.state) {
-      return res.status(400).json ({
-        msg:`Usuario / Password no son correctos - status:${Userlogin.status}`
+      return res.status(400).json({
+        msg: `Usuario / Password no son correctos - status:${Userlogin.status}`,
       });
     }
     // Verificar la contraseña
-    const validPassword = bcryptjs.compareSync( password , Userlogin.password)
-    if(!validPassword) {
+    const validPassword = bcryptjs.compareSync(password, Userlogin.password);
+    if (!validPassword) {
       // console.log(validPassword)
-      return res.status(400).json ({
-        msg:`Usuario / Password no son correctos - El password es ${validPassword}`
+      return res.status(400).json({
+        msg: `Usuario / Password no son correctos - El password es ${validPassword}`,
       });
     }
 
     //  Generar el JWT
-      const token = await generarJWT(Userlogin.id);
+    const token = await generarJWT(Userlogin.id);
 
     res.json({
       Userlogin,
-      token
-      
+      token,
     });
-
   } catch (err) {
-    console.log(err)
+    console.log(err);
     return res.status(500).json({
-      msg:'Hable con el administrador'
-    })
+      msg: "Hable con el administrador",
+    });
   }
 };
 
 // -------------USUARIO GOOGLE -------------------------//
-
-const googleSingIn =  async (req, res = response , next ) => {
-  
+const googleSingIn = async (req = request, res = response) => {
   const { id_token } = req.body;
 
   try {
+    const { name, email, img } = await googleVerify(id_token);
+    // console.log(Usergoogle);
 
+    let usuario = await user.findOne({ email });
+
+    if (!usuario) {
+      // Tengo que crearlo
+      const data = {
+        name,
+        email,
+        password: ":P",
+        rol: "USER_ROLE",
+        img,
+        google: true,
+      };
+
+      usuario = new user(data)
+      await usuario.save()
+    }    
+// Es para verificar si el usuario esta en la base de datos 
+
+    if(!usuario.state) {
+        return res.status(401).json ({ 
+            msg:'Hable con el administrador, usuario bloqueado'
+          });
+        }
+        //Generar el JWT
+        const token = await generarJWT(usuario.id);
+
+    res.json({
+      msg: "Todo bien , google signing",
+      token,
+      usuario
+    });
+  } catch (error) {
+    res.status(400).json({
+      ok: false,
+      msg: "El token no se pudo verificar",
+    });
+  }
+
+  /*
+  try {
     const { email, img , name } = await googleVerify( id_token )
 
     let Usergoogle = await user.findOne({ email });
@@ -106,12 +143,22 @@ const googleSingIn =  async (req, res = response , next ) => {
       ok: false, 
       msg:'El token no se pudo verificar'
     })
-  }
-}
+  } */
+};
 
+const renovarTokenController = async (req, res = response) => {
+  const { user } = req;
+  //Generar el JWT
+  const token = await generarJWT(user.id);
 
+  res.json({
+    user,
+    token,
+  });
+};
 
 module.exports = {
   login,
-  googleSingIn
+  googleSingIn,
+  renovarTokenController,
 };

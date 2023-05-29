@@ -9,21 +9,33 @@ async function googleVerify ( token = '' ) {
       // Or, if multiple clients access the backend:
       //[CLIENT_ID_1, CLIENT_ID_2, CLIENT_ID_3]
   });
-  
-  const { name, 
-    picture, 
-    email,
-    
-   } = ticket.getPayload();
-  // console.log( payload )
+
+  const payload = ticket.getPayload(); 
+
+  let  name = payload.name, email = payload.email, img = payload.picture;
+  // console.log( email, name , picture );
 
   return {
-    name, 
-    img:picture, 
+    name,
     email,
-    // rol,
-    // google
+    img,
+    google: true,
   }
+
+  // const { 
+  //   name, 
+  //   picture, 
+  //   email,
+  //  } = ticket.getPayload();
+  // //  console.log( payload )
+
+  // return {
+  //   name, 
+  //   img:picture, 
+  //   email,
+  //   rol,
+  //   google
+  // } 
 }
 // verify().catch(console.error);
 module.exports = {

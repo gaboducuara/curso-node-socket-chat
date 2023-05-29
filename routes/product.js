@@ -21,9 +21,6 @@ const {validarCampos,
 } = require('../middlewares')
 
 const router = Router();
-
-
-
 // Obtener todos los productos  - Public
 router.get("/", ProductGet);
 
